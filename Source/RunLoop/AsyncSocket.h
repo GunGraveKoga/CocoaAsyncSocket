@@ -8,14 +8,15 @@
 //  http://code.google.com/p/cocoaasyncsocket/
 //
 
-#import <Foundation/Foundation.h>
+#import <ObjFW/ObjFW.h>
+#import "../macros.h"
 
 @class AsyncSocket;
 @class AsyncReadPacket;
 @class AsyncWritePacket;
 
-extern NSString *const AsyncSocketException;
-extern NSString *const AsyncSocketErrorDomain;
+extern OFString *const AsyncSocketException;
+extern OFString *const AsyncSocketErrorDomain;
 
 typedef NS_ENUM(NSInteger, AsyncSocketError) {
 	AsyncSocketCFSocketError = kCFSocketError,	// From CFSocketError enum.
@@ -27,7 +28,6 @@ typedef NS_ENUM(NSInteger, AsyncSocketError) {
 	AsyncSocketWriteTimeoutError
 };
 
-__deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and will be removed in a future release. Please migrate to GCDAsyncSocket.")
 @protocol AsyncSocketDelegate
 @optional
 
@@ -37,7 +37,7 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * When connecting, this delegate method may be called
  * before"onSocket:didAcceptNewSocket:" or "onSocket:didConnectToHost:".
 **/
-- (void)onSocket:(AsyncSocket *)sock willDisconnectWithError:(NSError *)err;
+- (void)onSocket:(AsyncSocket *)sock willDisconnectWithError:(OFException *)err;
 
 /**
  * Called when a socket disconnects with or without error.  If you want to release a socket after it disconnects,
@@ -56,9 +56,9 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
 
 /**
  * Called when a new socket is spawned to handle a connection.  This method should return the run-loop of the
- * thread on which the new socket and its delegate should operate. If omitted, [NSRunLoop currentRunLoop] is used.
+ * thread on which the new socket and its delegate should operate. If omitted, [OFRunLoop currentRunLoop] is used.
 **/
-- (NSRunLoop *)onSocket:(AsyncSocket *)sock wantsRunLoopForNewSocket:(AsyncSocket *)newSocket;
+- (OFRunLoop *)onSocket:(AsyncSocket *)sock wantsRunLoopForNewSocket:(AsyncSocket *)newSocket;
 
 /**
  * Called when a socket is about to connect. This method should return YES to continue, or NO to abort.
@@ -77,13 +77,13 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * Called when a socket connects and is ready for reading and writing.
  * The host parameter will be an IP address, not a DNS name.
 **/
-- (void)onSocket:(AsyncSocket *)sock didConnectToHost:(NSString *)host port:(UInt16)port;
+- (void)onSocket:(AsyncSocket *)sock didConnectToHost:(OFString *)host port:(uint16_t)port;
 
 /**
  * Called when a socket has completed reading the requested data into memory.
  * Not called if there is an error.
 **/
-- (void)onSocket:(AsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag;
+- (void)onSocket:(AsyncSocket *)sock didReadData:(OFDataArray *)data withTag:(long)tag;
 
 /**
  * Called when a socket has read in data, but has not yet completed the read.
@@ -114,9 +114,9 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * 
  * Note that this method may be called multiple times for a single read if you return positive numbers.
 **/
-- (NSTimeInterval)onSocket:(AsyncSocket *)sock
+- (of_time_interval_t)onSocket:(AsyncSocket *)sock
   shouldTimeoutReadWithTag:(long)tag
-                   elapsed:(NSTimeInterval)elapsed
+                   elapsed:(of_time_interval_t)elapsed
                  bytesDone:(NSUInteger)length;
 
 /**
@@ -130,9 +130,9 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * 
  * Note that this method may be called multiple times for a single write if you return positive numbers.
 **/
-- (NSTimeInterval)onSocket:(AsyncSocket *)sock
+- (of_time_interval_t)onSocket:(AsyncSocket *)sock
  shouldTimeoutWriteWithTag:(long)tag
-                   elapsed:(NSTimeInterval)elapsed
+                   elapsed:(of_time_interval_t)elapsed
                  bytesDone:(NSUInteger)length;
 
 /**
@@ -150,37 +150,36 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
 #pragma mark -
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-__deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and will be removed in a future release. Please migrate to GCDAsyncSocket.")
-@interface AsyncSocket : NSObject
+@interface AsyncSocket : OFObject
 {
-	CFSocketNativeHandle theNativeSocket4;
-	CFSocketNativeHandle theNativeSocket6;
+	of_socket_t theNativeSocket4;
+	of_socket_t theNativeSocket6;
 	
-	CFSocketRef theSocket4;            // IPv4 accept or connect socket
-	CFSocketRef theSocket6;            // IPv6 accept or connect socket
+	OFTCPSocket* theSocket4;            // IPv4 accept or connect socket
+	OFTCPSocket* theSocket6;            // IPv6 accept or connect socket
 	
-	CFReadStreamRef theReadStream;
-	CFWriteStreamRef theWriteStream;
+	OFStream* theReadStream;
+	OFStream* theWriteStream;
 
-	CFRunLoopSourceRef theSource4;     // For theSocket4
-	CFRunLoopSourceRef theSource6;     // For theSocket6
-	CFRunLoopRef theRunLoop;
+	//CFRunLoopSourceRef theSource4;     // For theSocket4
+	//CFRunLoopSourceRef theSource6;     // For theSocket6
+	OFRunLoop* theRunLoop;
 	CFSocketContext theContext;
-	NSArray *theRunLoopModes;
+	OFArray *theRunLoopModes;
 	
-	NSTimer *theConnectTimer;
+	OFTimer *theConnectTimer;
 
-	NSMutableArray *theReadQueue;
+	OFMutableArray *theReadQueue;
 	AsyncReadPacket *theCurrentRead;
-	NSTimer *theReadTimer;
-	NSMutableData *partialReadBuffer;
+	OFTimer *theReadTimer;
+	OFDataArray *partialReadBuffer;
 	
-	NSMutableArray *theWriteQueue;
+	OFMutableArray *theWriteQueue;
 	AsyncWritePacket *theCurrentWrite;
-	NSTimer *theWriteTimer;
+	OFTimer *theWriteTimer;
 
 	id theDelegate;
-	UInt16 theFlags;
+	uint16_t theFlags;
 	
 	long theUserData;
 }
@@ -190,7 +189,7 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
 - (id)initWithDelegate:(id)delegate userData:(long)userData;
 
 /* String representation is long but has no "\n". */
-- (NSString *)description;
+- (OFString *)description;
 
 /**
  * Use "canSafelySetDelegate" to see if there is any pending business (reads and writes) with the current delegate
@@ -205,9 +204,9 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
 - (void)setUserData:(long)userData;
 
 /* Don't use these to read or write. And don't close them either! */
-- (CFSocketRef)getCFSocket;
-- (CFReadStreamRef)getCFReadStream;
-- (CFWriteStreamRef)getCFWriteStream;
+- (OFTCPSocket *)getCFSocket;
+- (OFStream *)getCFReadStream;
+- (OFStream *)getCFWriteStream;
 
 // Once one of the accept or connect methods are called, the AsyncSocket instance is locked in
 // and the other accept/connect methods can't be called without disconnecting the socket first.
@@ -236,7 +235,7 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * When a connection comes in, the AsyncSocket instance will call the various delegate methods (see above).
  * The socket will listen on all available interfaces (e.g. wifi, ethernet, etc)
 **/
-- (BOOL)acceptOnPort:(UInt16)port error:(NSError **)errPtr;
+- (BOOL)acceptOnPort:(uint16_t)port error:(OFException **)errPtr;
 
 /**
  * This method is the same as acceptOnPort:error: with the additional option
@@ -248,43 +247,43 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * 
  * To accept connections on any interface pass nil, or simply use the acceptOnPort:error: method.
 **/
-- (BOOL)acceptOnInterface:(NSString *)interface port:(UInt16)port error:(NSError **)errPtr;
+- (BOOL)acceptOnInterface:(OFString *)interface port:(uint16_t)port error:(OFException **)errPtr;
 
 /**
  * Connects to the given host and port.
  * The host may be a domain name (e.g. "deusty.com") or an IP address string (e.g. "192.168.0.2")
 **/
-- (BOOL)connectToHost:(NSString *)hostname onPort:(UInt16)port error:(NSError **)errPtr;
+- (BOOL)connectToHost:(OFString *)hostname onPort:(uint16_t)port error:(OFException **)errPtr;
 
 /**
  * This method is the same as connectToHost:onPort:error: with an additional timeout option.
  * To not time out use a negative time interval, or simply use the connectToHost:onPort:error: method.
 **/
-- (BOOL)connectToHost:(NSString *)hostname
-			   onPort:(UInt16)port
-		  withTimeout:(NSTimeInterval)timeout
-				error:(NSError **)errPtr;
+- (BOOL)connectToHost:(OFString *)hostname
+			   onPort:(uint16_t)port
+		  withTimeout:(of_time_interval_t)timeout
+				error:(OFException **)errPtr;
 
 /**
- * Connects to the given address, specified as a sockaddr structure wrapped in a NSData object.
- * For example, a NSData object returned from NSNetService's addresses method.
+ * Connects to the given address, specified as a sockaddr structure wrapped in a OFDataArray object.
+ * For example, a OFDataArray object returned from NSNetService's addresses method.
  * 
- * If you have an existing struct sockaddr you can convert it to a NSData object like so:
- * struct sockaddr sa  -> NSData *dsa = [NSData dataWithBytes:&remoteAddr length:remoteAddr.sa_len];
- * struct sockaddr *sa -> NSData *dsa = [NSData dataWithBytes:remoteAddr length:remoteAddr->sa_len];
+ * If you have an existing struct sockaddr you can convert it to a OFDataArray object like so:
+ * struct sockaddr sa  -> OFDataArray *dsa = [OFDataArray dataWithBytes:&remoteAddr length:remoteAddr.sa_len];
+ * struct sockaddr *sa -> OFDataArray *dsa = [OFDataArray dataWithBytes:remoteAddr length:remoteAddr->sa_len];
 **/
-- (BOOL)connectToAddress:(NSData *)remoteAddr error:(NSError **)errPtr;
+- (BOOL)connectToAddress:(OFDataArray *)remoteAddr error:(OFException **)errPtr;
 
 /**
  * This method is the same as connectToAddress:error: with an additional timeout option.
  * To not time out use a negative time interval, or simply use the connectToAddress:error: method.
 **/
-- (BOOL)connectToAddress:(NSData *)remoteAddr withTimeout:(NSTimeInterval)timeout error:(NSError **)errPtr;
+- (BOOL)connectToAddress:(OFDataArray *)remoteAddr withTimeout:(of_time_interval_t)timeout error:(OFException **)errPtr;
 
-- (BOOL)connectToAddress:(NSData *)remoteAddr
-     viaInterfaceAddress:(NSData *)interfaceAddr
-             withTimeout:(NSTimeInterval)timeout
-                   error:(NSError **)errPtr;
+- (BOOL)connectToAddress:(OFDataArray *)remoteAddr
+     viaInterfaceAddress:(OFDataArray *)interfaceAddr
+             withTimeout:(of_time_interval_t)timeout
+                   error:(OFException **)errPtr;
 
 /**
  * Disconnects immediately. Any pending reads or writes are dropped.
@@ -325,20 +324,20 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * Returns the local or remote host and port to which this socket is connected, or nil and 0 if not connected.
  * The host will be an IP address.
 **/
-- (NSString *)connectedHost;
-- (UInt16)connectedPort;
+- (OFString *)connectedHost;
+- (uint16_t)connectedPort;
 
-- (NSString *)localHost;
-- (UInt16)localPort;
+- (OFString *)localHost;
+- (uint16_t)localPort;
 
 /**
  * Returns the local or remote address to which this socket is connected,
- * specified as a sockaddr structure wrapped in a NSData object.
+ * specified as a sockaddr structure wrapped in a OFDataArray object.
  * 
  * See also the connectedHost, connectedPort, localHost and localPort methods.
 **/
-- (NSData *)connectedAddress;
-- (NSData *)localAddress;
+- (OFDataArray *)connectedAddress;
+- (OFDataArray *)localAddress;
 
 /**
  * Returns whether the socket is IPv4 or IPv6.
@@ -365,7 +364,7 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * 
  * If the timeout value is negative, the read operation will not use a timeout.
 **/
-- (void)readDataWithTimeout:(NSTimeInterval)timeout tag:(long)tag;
+- (void)readDataWithTimeout:(of_time_interval_t)timeout tag:(long)tag;
 
 /**
  * Reads the first available bytes that become available on the socket.
@@ -382,8 +381,8 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * After completion, the data returned in onSocket:didReadData:withTag: will be a subset of the given buffer.
  * That is, it will reference the bytes that were appended to the given buffer.
 **/
-- (void)readDataWithTimeout:(NSTimeInterval)timeout
-					 buffer:(NSMutableData *)buffer
+- (void)readDataWithTimeout:(of_time_interval_t)timeout
+					 buffer:(OFDataArray *)buffer
 			   bufferOffset:(NSUInteger)offset
 						tag:(long)tag;
 
@@ -404,8 +403,8 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * After completion, the data returned in onSocket:didReadData:withTag: will be a subset of the given buffer.
  * That is, it will reference the bytes that were appended to the given buffer.
 **/
-- (void)readDataWithTimeout:(NSTimeInterval)timeout
-                     buffer:(NSMutableData *)buffer
+- (void)readDataWithTimeout:(of_time_interval_t)timeout
+                     buffer:(OFDataArray *)buffer
                bufferOffset:(NSUInteger)offset
                   maxLength:(NSUInteger)length
                         tag:(long)tag;
@@ -417,7 +416,7 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * 
  * If the length is 0, this method does nothing and the delegate is not called.
 **/
-- (void)readDataToLength:(NSUInteger)length withTimeout:(NSTimeInterval)timeout tag:(long)tag;
+- (void)readDataToLength:(NSUInteger)length withTimeout:(of_time_interval_t)timeout tag:(long)tag;
 
 /**
  * Reads the given number of bytes.
@@ -436,8 +435,8 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * That is, it will reference the bytes that were appended to the given buffer.
 **/
 - (void)readDataToLength:(NSUInteger)length
-             withTimeout:(NSTimeInterval)timeout
-                  buffer:(NSMutableData *)buffer
+             withTimeout:(of_time_interval_t)timeout
+                  buffer:(OFDataArray *)buffer
             bufferOffset:(NSUInteger)offset
                      tag:(long)tag;
 
@@ -453,7 +452,7 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * Note that this method is not character-set aware, so if a separator can occur naturally as part of the encoding for
  * a character, the read will prematurely end.
 **/
-- (void)readDataToData:(NSData *)data withTimeout:(NSTimeInterval)timeout tag:(long)tag;
+- (void)readDataToData:(OFDataArray *)data withTimeout:(of_time_interval_t)timeout tag:(long)tag;
 
 /**
  * Reads bytes until (and including) the passed "data" parameter, which acts as a separator.
@@ -474,9 +473,9 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * Note that this method is not character-set aware, so if a separator can occur naturally as part of the encoding for
  * a character, the read will prematurely end.
 **/
-- (void)readDataToData:(NSData *)data
-           withTimeout:(NSTimeInterval)timeout
-                buffer:(NSMutableData *)buffer
+- (void)readDataToData:(OFDataArray *)data
+           withTimeout:(of_time_interval_t)timeout
+                buffer:(OFDataArray *)buffer
           bufferOffset:(NSUInteger)offset
                    tag:(long)tag;
 
@@ -499,7 +498,7 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * Note that this method is not character-set aware, so if a separator can occur naturally as part of the encoding for
  * a character, the read will prematurely end.
 **/
-- (void)readDataToData:(NSData *)data withTimeout:(NSTimeInterval)timeout maxLength:(NSUInteger)length tag:(long)tag;
+- (void)readDataToData:(OFDataArray *)data withTimeout:(of_time_interval_t)timeout maxLength:(NSUInteger)length tag:(long)tag;
 
 /**
  * Reads bytes until (and including) the passed "data" parameter, which acts as a separator.
@@ -528,9 +527,9 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * Note that this method is not character-set aware, so if a separator can occur naturally as part of the encoding for
  * a character, the read will prematurely end.
 **/
-- (void)readDataToData:(NSData *)data
-           withTimeout:(NSTimeInterval)timeout
-                buffer:(NSMutableData *)buffer
+- (void)readDataToData:(OFDataArray *)data
+           withTimeout:(of_time_interval_t)timeout
+                buffer:(OFDataArray *)buffer
           bufferOffset:(NSUInteger)offset
              maxLength:(NSUInteger)length
                    tag:(long)tag;
@@ -541,7 +540,7 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * If you pass in nil or zero-length data, this method does nothing and the delegate will not be called.
  * If the timeout value is negative, the write operation will not use a timeout.
 **/
-- (void)writeData:(NSData *)data withTimeout:(NSTimeInterval)timeout tag:(long)tag;
+- (void)writeData:(OFDataArray *)data withTimeout:(of_time_interval_t)timeout tag:(long)tag;
 
 /**
  * Returns progress of current read or write, from 0.0 to 1.0, or NaN if no read/write (use isnan() to check).
@@ -621,39 +620,39 @@ __deprecated_msg("The RunLoop versions of CocoaAsyncSocket are deprecated and wi
  * Note: After calling this method, all further method calls to this object should be done from the given runloop.
  * Also, all delegate calls will be sent on the given runloop.
 **/
-- (BOOL)moveToRunLoop:(NSRunLoop *)runLoop;
+- (BOOL)moveToRunLoop:(OFRunLoop *)runLoop;
 
 /**
  * Allows you to configure which run loop modes the socket uses.
  * The default set of run loop modes is NSDefaultRunLoopMode.
  * 
  * If you'd like your socket to continue operation during other modes, you may want to add modes such as
- * NSModalPanelRunLoopMode or NSEventTrackingRunLoopMode. Or you may simply want to use NSRunLoopCommonModes.
+ * NSModalPanelRunLoopMode or NSEventTrackingRunLoopMode. Or you may simply want to use OFRunLoopCommonModes.
  * 
  * Accepted sockets will automatically inherit the same run loop modes as the listening socket.
  * 
- * Note: NSRunLoopCommonModes is defined in 10.5. For previous versions one can use kCFRunLoopCommonModes.
+ * Note: OFRunLoopCommonModes is defined in 10.5. For previous versions one can use kCFRunLoopCommonModes.
 **/
-- (BOOL)setRunLoopModes:(NSArray *)runLoopModes;
-- (BOOL)addRunLoopMode:(NSString *)runLoopMode;
-- (BOOL)removeRunLoopMode:(NSString *)runLoopMode;
+- (BOOL)setRunLoopModes:(OFArray *)runLoopModes;
+- (BOOL)addRunLoopMode:(OFString *)runLoopMode;
+- (BOOL)removeRunLoopMode:(OFString *)runLoopMode;
 
 /**
  * Returns the current run loop modes the AsyncSocket instance is operating in.
  * The default set of run loop modes is NSDefaultRunLoopMode.
 **/
-- (NSArray *)runLoopModes;
+- (OFArray *)runLoopModes;
 
 /**
  * In the event of an error, this method may be called during onSocket:willDisconnectWithError: to read
  * any data that's left on the socket.
 **/
-- (NSData *)unreadData;
+- (OFDataArray *)unreadData;
 
 /* A few common line separators, for use with the readDataToData:... methods. */
-+ (NSData *)CRLFData;   // 0x0D0A
-+ (NSData *)CRData;     // 0x0D
-+ (NSData *)LFData;     // 0x0A
-+ (NSData *)ZeroData;   // 0x00
++ (OFDataArray *)CRLFData;   // 0x0D0A
++ (OFDataArray *)CRData;     // 0x0D
++ (OFDataArray *)LFData;     // 0x0A
++ (OFDataArray *)ZeroData;   // 0x00
 
 @end
